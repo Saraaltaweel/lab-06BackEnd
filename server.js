@@ -6,7 +6,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-const PORT = process.env.PORT ||3001;
+const PORT = process.env.PORT ||3000;
 const app = express();
 app.use(cors());
 
@@ -16,6 +16,9 @@ app.get('/weather', handelWeatherRequest);
 function handelLocationRequest(req, res) {
 
     const searchQuery = req.query.city;
+  if (!searchQuery){
+    res.status(500).send('something is wrong in server');}
+  
   
     const locationsRawData = require('./data/location.json');
     const location = new Location(locationsRawData[0])
@@ -26,7 +29,7 @@ function handelWeatherRequest(req, res) {
     const weatherRawData = require('./data/weather.json');
     const weatherData = [];
 
-    weatherRawData.weatherRawData.forEach(weather => {
+    weatherRawData.data.forEach(weather => {
         weatherData.push(new Weather(weather));
     });
 
@@ -41,19 +44,11 @@ function Location(data) {
     this.longitude = data.lon;
 }
 function Weather(data) {
-    this.description = data.description.name;
+    this.description = data.weather.description;
     this.valid_date = data.valid_date;
     
 }
-function errorHandler(err, req, res, next) {
-    ResizeObserverSize.status(500).send('something is wrong in server');}
-  
-    app.use(errorHandler);
 
-    app.use('*', notFoundHandler);
-
-    function notFoundHandler(req, res) { 
-    res.status(404).send('requested API is Not Found!');}
 
 app.use('*', (req, res) => {
     res.send('all good nothing to see here!');
