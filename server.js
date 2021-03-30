@@ -6,18 +6,20 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT ||3000;
 const app = express();
 app.use(cors());
 
 app.get('/location', handelLocationRequest);
-app.get('/weather', handelRestaurantRequest);
+app.get('/weather', handelWeatherRequest);
 
 function handelLocationRequest(req, res) {
 
-    const searchQuery = req.query;
-    console.log(searchQuery);
-
+    const searchQuery = req.query.city;
+  if (!searchQuery){
+    res.status(500).send('something is wrong in server');}
+  
+  
     const locationsRawData = require('./data/location.json');
     const location = new Location(locationsRawData[0])
     res.send(location);
@@ -27,7 +29,7 @@ function handelWeatherRequest(req, res) {
     const weatherRawData = require('./data/weather.json');
     const weatherData = [];
 
-    weatherRawData.nearby_weather.forEach(weather => {
+    weatherRawData.data.forEach(weather => {
         weatherData.push(new Weather(weather));
     });
 
@@ -40,6 +42,11 @@ function Location(data) {
     this.formatted_query = data.display_name;
     this.latitude = data.lat;
     this.longitude = data.lon;
+}
+function Weather(data) {
+    this.description = data.weather.description;
+    this.valid_date = data.valid_date;
+    
 }
 
 
