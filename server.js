@@ -34,7 +34,6 @@ function handelLocationRequest(req, res) {
   
     
 }
-    // const url = `https://api.weatherbit.io/v2.0/current?lat=${lat}&lon=${lon}&key=${WEATHERS_API_KEY}&include=minutely`;
 
 function handelWeatherRequest(req, res) {
     const lat = req.query.latitude;
@@ -56,7 +55,7 @@ function handelWeatherRequest(req, res) {
 
 
 function Location(searchQuery,data) {
-    this.searchQuery=searchQuery;
+    this.search_query=searchQuery;
     this.formatted_query = data.display_name;
     this.latitude = data.lat;
     this.longitude = data.lon;
@@ -66,10 +65,11 @@ function Weather(data) {
     this.time = data.datetime;
     
 }
-
+// const url = `https://developer.nps.gov/api/v1/alerts?q=${searchQuery3}&API_KEY=${PARK_API_KEY}`;
 function handelParksRequest(req,res){
     const searchQuery3=req.query.searchQuery;
-    const url = `https://developer.nps.gov/api/v1/alerts?q=${searchQuery3}&API_KEY=${PARK_API_KEY}`;
+    const url = `https://developer.nps.gov/api/v1/parks?city=${searchQuery3}&api_key=${PARK_API_KEY}&limit=10`;
+
     superagent.get(url).then(item => {
         // console.log(item);
         const parkData = item.body.data.map(park => {
