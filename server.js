@@ -3,10 +3,13 @@
 
 require('dotenv').config();
 const superagent = require('superagent');
+const pg = require('pg');
 const express = require('express');
 const cors = require('cors');
 
-const PORT = process.env.PORT ||4000;
+const PORT = process.env.PORT ||3000;
+const ENV = process.env.ENV || 'DEB';
+const DATABASE_URL=process.env.DATABASE_URL;
 const GEOCODE_API_KEY= process.env.GEOCODE_API_KEY;
 const WEATHERS_API_KEY= process.env.WEATHERS_API_KEY;
 const PARK_API_KEY= process.env.PARK_API_KEY;
@@ -14,27 +17,100 @@ const app = express();
 app.use(cors());
 
 app.get('/location', handelLocationRequest);
-app.get('/weather', handelWeatherRequest);
-app.get('/parks', handelParksRequest);
+// app.get('/weather', handelWeatherRequest);
+// app.get('/parks', handelParksRequest);
+// const client = new pg.Client(process.env.DATABASE_URL);
+let client ='';
+if(ENV==='DIV'){
+  client = new pg.Client({connectionString: DATABASE_URL})
+}else{client = new pg.Client({
+    connectionString: DATABASE_URL,
+    ssl: {rejectUnauthorized: false}
+    })}
+
 
 function handelLocationRequest(req, res) {
 
     const searchQuery = req.query.city;
+    const city=[searchQuery];
+    let select=`SELECT * FROM locations WHERE search_query=$1;`
     const url=`https://eu1.locationiq.com/v1/search.php?key=${GEOCODE_API_KEY}&q=${searchQuery}&format=json`;
 
     if (!searchQuery){
         res.status(500).send('something is wrong in server');}
+   
+        client.query(select,city).then(result=>{
+         if(result.rows.length>0){
+            res.send(result.rows[0])
+           
+            console.log(result.rows)
+         }
+         
+        
+       
+        
+        else{
+            superagent.get(url).then(item=>{
+                const location = new Location(searchQuery,item.body[0]);
+                const SQL = 'INSERT INTO locations (search_query, formatted_query,latitude,longitude) VALUES($1, $2, $3, $4);';
+        
+                let values=[searchQuery,location.formatted_query,location.latitude,location.longitude];
+                client.query(SQL,values).then(item=>{
+                    console.log(item.rows)
+                })
+                res.send(location);
 
-    superagent.get(url).then(item=>{
-        const location = new Location(searchQuery,item.body[0]);
-        res.send(location);
-    })
+            })
+            .catch(() => {
+                res.status(404).send("your search not found");
+              });
 
-  
-  
+                
+                    // return{
+                    //   search_query: searchQuery,
+                    //   formatted_query: data.display_name,
+                    //   latitude: data.lat,
+                    //   longitude: data.lon
+                    // }
+            
+        }  
+              
+               
+            
     
+       
+        console.log(result.rows);
+    
+
+    })
 }
 
+
+//     superagent.get(url).then(item=>{
+//         const location = item.body.map(data=>{
+//             return{
+//               search_query: searchQuery,
+//               formatted_query: data.display_name,
+//               latitude: data.lat,
+//               longitude: data.lon
+//             }
+//           });
+//         const SQL = 'INSERT INTO locations (search_query, formatted_query,latitude,longitude) VALUES($1, $2, $3, $4) RETURNING *';
+
+//         let values=[searchQuery,location.search_query,location.latitude,location.longitude];
+//         client.query(SQL,values).then(item=>{
+//             console.log(item.rows)
+//         })
+       
+//         res.send(location);
+//     })
+
+  
+
+// }   
+
+
+  
 function handelWeatherRequest(req, res) {
     const lat = req.query.latitude;
   const lon = req.query.longitude;
@@ -52,6 +128,7 @@ function handelWeatherRequest(req, res) {
    });
 
 }
+
 
 
 function Location(searchQuery,data) {
@@ -92,4 +169,7 @@ app.use('*', (req, res) => {
     res.send('all good nothing to see here!');
 });
 
-app.listen(PORT, () => console.log(`Listening to Port ${PORT}`));
+client.connect().then(()=>{
+
+    app.listen(PORT, () => console.log(`App is running on Server on port: ${PORT}`));
+  })
