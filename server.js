@@ -13,12 +13,18 @@ const DATABASE_URL=process.env.DATABASE_URL;
 const GEOCODE_API_KEY= process.env.GEOCODE_API_KEY;
 const WEATHERS_API_KEY= process.env.WEATHERS_API_KEY;
 const PARK_API_KEY= process.env.PARK_API_KEY;
+const MOVIES_API_KEY= process.env.MOVIES_API_KEY;
+const YELP_API_KEY= process.env.YELP_API_KEY;
+
 const app = express();
 app.use(cors());
 
 app.get('/location', handelLocationRequest);
-// app.get('/weather', handelWeatherRequest);
-// app.get('/parks', handelParksRequest);
+app.get('/weather', handelWeatherRequest);
+app.get('/parks', handelParksRequest);
+app.get('/movies', handelMovieRequest);
+app.get('/yelp', handelYelpRequest);
+
 // const client = new pg.Client(process.env.DATABASE_URL);
 let client ='';
 if(ENV==='DIV'){
@@ -164,6 +170,58 @@ function Parks(data){
     this.description=data.description;
     this.park_url=data.url;
 }
+
+function handelMovieRequest(req,res){
+    const searchQuery4=req.query.searchQuery;
+    const url = `https://api.themoviedb.org/3/search/movie?api_key=${MOVIES_API_KEY}&query=${searchQuery4}`;
+
+    superagent.get(url).then(item => {
+        // console.log(item);
+        const movieData = item.body.results.map(movie => {
+            return new Movie(movie);
+          });
+          res.send(movieData);   
+         });
+       
+      }
+
+function Movie(data){
+    this.title=data.title;
+    this.overview=data.overview;
+    this.average_votes=data.average_votes;
+    this.total_votes=data.total_votes;
+    this.image_url=`https://image.tmdb.org/t/p/w500${data.poster_path}`;
+
+    this.popularity=data.popularity;
+    this.released_on=data.released_on;
+
+
+}
+
+function handelYelpRequest(req,res){
+    const searchQuery5=req.query.searchQuery;
+    const url = `https://api.yelp.com/v3/businesses/search?location=${searchQuery5}&limit=50`;
+
+    superagent.get(url).set('Authorization', `Bearer ${YELP_API_KEY}`).then(item => {
+        // console.log(item);
+        const yelpData = item.body.businesses.map(yelp => {
+            return new Yelp(yelp);
+          });
+          res.send(yelpData);   
+         });
+       
+      }
+
+      
+  function Yelp(data){
+    this.name=data.name;
+    this.image_url=data.image_url;
+    this.price=data.price;
+    this.rating=data.rating;
+    this.url=data.url;
+
+}
+
 
 app.use('*', (req, res) => {
     res.send('all good nothing to see here!');
